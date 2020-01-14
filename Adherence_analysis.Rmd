@@ -1,0 +1,517 @@
+---
+title: "Statistical Analysis for Functional Health Literacy on Treatment Adherence among Type 2 Diabetic Clients' Survey Data"
+author: "Alfeo Sabay"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette
+  
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE, cache=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+##########################################################################################
+# Experimental Statistical Analysis for Functional Health Literacy on Treatment Adherence 
+# among Type 2 Diabetic Clients' Survey Data
+#
+# Alfeo Sabay
+#
+#########################################################################################
+
+library(plyr)
+library(pastecs)
+library(vcd)
+library(car)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(xtable)
+library(tibble)
+library(knitr)
+library(kableExtra)
+library(captioner)
+library(pander)
+
+#######################################################################################
+# Data loading and preparation section
+#######################################################################################
+
+rdata <- read.csv("data/adherence_recoded-2.csv")
+summary(rdata)
+demog <- read.csv("data/Demographics.csv")
+ddata <- subset(x=demog, select=-c(X))
+
+
+# select data columns of interest
+sel_data <- subset(x=rdata, select = c(nvs, Regimen, Belief, Recall, Access, Total.Score))
+sel_data <- rename(sel_data, NVS=nvs, BMQ=Total.Score)
+# add demographic columns
+dt <- cbind(sel_data, ddata, deparse.level = 0)
+dt <- rename(dt, Other_Medications=Other.Medications)
+
+# create Literacy_Level Ordinal Category Variable (dplyr style)
+dt <- dt %>%
+  mutate(Literacy_level = case_when((NVS >= 0 & NVS <=1)~"limited",
+                                    (NVS >= 2 & NVS <=3)~"possibly",
+                                    (NVS >= 4 & NVS <=6)~"adequate") )
+
+# make Literacy_level ordinal factor
+dt$Literacy_level <- factor(dt$Literacy_level, order=TRUE, 
+                            levels=c("limited","possibly", "adequate"))
+
+
+# make Gender a factor variable
+dt$Gender <- trimws(dt$Gender) # get rid of whitespace
+dt$Gender <- factor(dt$Gender)
+
+# convert Other_Medications to lower case
+dt$Other_Medications <- tolower(dt$Other_Medications)
+
+# make Other_Medications a factor variable
+dt$Other_Medications <- trimws(dt$Other_Medications)
+dt$Other_Medications <- factor(dt$Other_Medications)
+
+# recode belief, regimen, recall, access to binary
+dt <- dt%>%
+  mutate(Belief=if_else(Belief > 0, 1, 0),
+         Recall=if_else(Recall > 0, 1, 0),
+         Regimen=if_else(Regimen > 0, 1, 0),
+         Access=if_else(Access > 0, 1, 0))
+
+freq_theme <- theme(legend.position="none",text = element_text(colour="Dark Blue"),
+                    axis.text = element_text(size=9,color="Black"),
+                    axis.title = element_text(size = rel(1.5)))
+
+ggplot(dt, aes(x=dt$BMQ, fill=5, color="red")) + geom_histogram(bins=11) + 
+  labs(title="Adherence Original Scale: 0 = Adherent", x="BMQ", y="Frequency") +
+  freq_theme
+
+
+
+#hist(dt$BMQ, main="Adherence Original Scale: 0 = Adherent", xlab = "BMQ")
+
+# convert BMQ to binary (0=adherent, 1=non-adherent)
+dt <- dt%>%
+  mutate(BMQ=if_else(BMQ>0, "Non-Adherent","Adherent"))
+
+dt$BMQ <- factor(dt$BMQ, order=TRUE, levels = c("Adherent","Non-Adherent") )
+
+# invert
+# dt$BMQ <- 1-dt$BMQ 
+
+# split data into fit and test
+## 80% of the sample size
+smp_size <- floor(0.8 * nrow(dt))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(dt)), size = smp_size)
+
+dt_fit <- dt[train_ind, ]
+dt_test <- dt[-train_ind, ]
+
+# caption setup
+table_nums <- captioner(prefix = "Table", style="b")
+figure_nums <- captioner(prefix = "Figure", style="b")
+
+table_nums(name = "head", caption = "Data Sample from Dataset", display=FALSE)
+table_nums(name="summary", caption="Statistical Summary", display=FALSE)
+table_nums(name="chisq", caption="Chi-Square Test for Adherence and Literacy", display=FALSE)
+table_nums(name = "glm_full", caption = "Full Model Logistic Regression", display=FALSE)
+table_nums(name = "glm_reduced", caption = "Reduced Model Logistic Regression", display=FALSE)
+table_nums(name="model_compare", caption="ANOVA: Full and Reduced Model Comparison")
+table_nums(name="model_coef", caption="Model Coefficients (Odds Scale)")
+table_nums(name="model_coefint", caption="Model Coefficients with 95% Confidence Intervals")
+table_nums(name="model_pred_lit", caption="Fitted Model Prediction Age Constant")
+table_nums(name="model_pred_lim", caption="Fitted Model Prediction Holding Literacy Level At Limited")
+table_nums(name="model_pred_pos", caption="Fitted Model Prediction Holding Literacy Level At Possibly")
+table_nums(name="model_pred_adq", caption="Fitted Model Prediction Holding Literacy Level At Adequate")
+
+figure_nums(name="nvs", caption="NVS - Literacy Distribution")
+figure_nums(name="bmqcom", caption="BMQ - Overall Distribution")
+figure_nums(name="bmq_lit", caption="BMQ - By Literacy Groups")
+figure_nums(name="bmq_gen", caption="BMQ - By Gender")
+figure_nums(name="bmq_age", caption="BMQ - By Age")
+figure_nums(name="bmq_meds", caption="BMQ - By Other Medications")
+figure_nums(name="full_eff", caption="Full Model Effects Plot")
+figure_nums(name="reduced_eff", caption="Reduced Model Effects Plot")
+```
+
+
+## Data Description 
+
+Survey data was gathered using two tools from 276 Diabetic Clients. The NVS (Newest Vital Sign) tool produced a literacy score ranging from zero to
+six (0 with the lowest literacy to 6 with the highest literacy) from a series of survey questions presented to the Diabetic Client. Similarly, the BMQ
+(Brief Medical Questionaire) tool derived a score in the range of zero to eleven (0 as most adherent and 11 as least adherent) relfecting the patient's
+adherence to treatment from a questionaire.
+
+This survey includes Demographic data. Age, Other Medications and Gender. Age is the disclosed age of the subject. Other Medications (coded as yes/no) reflect whether or not the subject is currently taking other medications apart from the diabetic medication. Gender (coded as Male, Female) reflect the gender of the subject.
+
+In order to examine the possible effects of variables that impact adherence, Logistic Regression will be performed on the data set. As such, the reponse variable BMQ has been coded as "Adherent" for scores of zero and "Non-Adherent" for scores greater than zero. Similarly, a new independent variable (ordinal categorical) was derived from the NVS Scores to reflect 3 literacy levels ("limited", "possibly", "adequate"). NVS scores of 0-1 is coded as "limited" literacy level. NVS scores of 2-3 are coded as "possibly" literacy level. NVS scores of 4-6 are coded as "adequate" literacy level.
+
+```{r dsample, echo=FALSE, results='asis'}
+#kable(head(dt)) %>%
+#  kable_styling(bootstrap_options = c("striped", "hover"))
+pander(head(dt))
+
+```
+<center> `r table_nums("head")` </center>
+<br>
+
+```{r, echo=FALSE, results='asis'}
+sm = summary(dt)
+pander(sm)
+#kable(summary(dt)) %>%
+#  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+<center>`r table_nums("summary")` </center>
+
+## Descriptive Statistics
+
+Plots are shown below for initial exploration of the data.
+<br>
+
+```{r, echo=FALSE, fig.width=6, fig.height=5,fig.pos="H"}
+# NVS
+ggplot(dt, aes(x=dt$NVS, fill=5, color="red")) + geom_histogram(bins=7) + 
+  labs(title="NVS", x="NVS", y="Frequency") +
+  freq_theme
+
+```
+
+```{r, echo=FALSE, results='asis'}
+pander(dt %>% count(NVS))
+```
+<center> `r figure_nums("nvs")` </center>
+<br>
+
+```{r, echo=FALSE, fig.width=6, fig.height=5,fig.pos="H"}
+
+# combined
+ggplot(dt, aes(x=dt$BMQ, fill=5)) + geom_bar() + 
+  labs(title="BMQ", x="BMQ", y="Frequency") + freq_theme
+
+
+```
+```{r, echo=FALSE, results='asis'}
+pander(dt %>% count(BMQ))
+```
+<center>`r figure_nums("bmqcom")`</center>
+<br>
+
+```{r, echo=FALSE, fig.width=6, fig.height=5,fig.pos="H"}
+
+# by Literacy
+ggplot(dt, aes(x=dt$BMQ, fill=5)) + geom_bar() + facet_grid(~dt$Literacy_level) + 
+    labs(title="BMQ Groups by Literacy Levels", x="BMQ", y="Frequency") + freq_theme
+
+```
+```{r, echo=FALSE, results='asis'}
+pander(dt %>% group_by(Literacy_level) %>% 
+         count(BMQ))
+```
+<center>`r figure_nums("bmq_lit")`</center>
+<br>
+
+```{r, echo=FALSE, fig.width=6, fig.height=5,fig.pos="H"}
+# by gender
+ggplot(dt, aes(x=dt$Gender, fill=5)) + geom_bar() + facet_grid(~dt$BMQ) + 
+  labs(title="BMQ Groups by Gender", x="Gender", y="Frequency") + freq_theme
+```
+```{r, echo=FALSE, results='asis'}
+pander(dt %>% group_by(BMQ) %>% 
+         count(Gender))
+```
+
+<center>`r figure_nums("bmq_gen")`</center>
+<br>
+
+```{r, echo=FALSE, fig.width=6, fig.height=5,fig.pos="H"}
+
+# by Age
+ggplot(dt, aes(x=dt$Age, fill=5)) + geom_histogram(binwidth = 1) + facet_grid(~dt$BMQ) + 
+  labs(title="BMQ Groups by Age", x="Age", y="Frequency") + freq_theme
+
+```
+
+```{r, echo=FALSE, results='asis'}
+pander(dt %>% 
+         filter(BMQ=="Adherent") %>%
+         select(BMQ, Age) %>%
+         summary()
+         )
+  
+```
+
+```{r, echo=FALSE, results='asis'}
+pander(dt %>% 
+         filter(BMQ=="Non-Adherent") %>%
+         select(BMQ, Age) %>%
+         summary()
+         )
+  
+```
+
+<center>`r figure_nums("bmq_age")`</center>
+<br>
+
+```{r, echo=FALSE, fig.width=6, fig.height=5,fig.pos="H"}
+
+# by Other Medications
+ggplot(dt, aes(x=dt$Other_Medications,  fill=5)) + geom_bar() + facet_grid(~dt$BMQ) + 
+  labs(title="BMQ Groups by Other Medications", x="Other Medications", y="Frequency") + freq_theme
+
+```
+
+```{r, echo=FALSE, results='asis'}
+pander(dt %>% group_by(BMQ) %>% 
+         count(Other_Medications))
+```
+
+<center>`r figure_nums("bmq_meds")`</center>
+<br>
+
+#### Chi-square Test For Independence (Null Hypothesis: Adherence and Literacy are Independent)
+
+The small p-value (0.0003503) in the Chi-square test output below means we reject the null hypothesis that BMQ and Literacy_level are independent of each other and we accept the alternative hypothesis that there is a relation between BMQ and Literacy_level.
+
+<br>
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+
+# Chi-Square Test for Independence - Null Hypothesis -> Variables are independent?
+v_table <- xtabs(~Literacy_level+BMQ, data=dt)
+cst <- chisq.test(v_table)
+pander(cst)
+```
+<center>`r table_nums("chisq")`</center>
+<br>
+
+## Logistic Regression
+
+We first start with a full Logistic Regression Model.
+
+<b>BMQ = Literacy_level + Gender + Age + Other_Medications</b>
+
+```{r, echo=FALSE, results='asis'}
+library(pander)
+
+fit.full <- glm(BMQ~Literacy_level+Gender+Age+Other_Medications, 
+                family=binomial(link="logit"), data = dt)
+
+pander(fit.full)
+ 
+```
+<center>`r table_nums("glm_full")`</center>
+<br>
+As can be seen from the results of the Logistic Regression above, the p-values for the variables Other_medications (0.7495) and Gender (0.6461) are large meaning these two variables do not contribute significantly to the response variable BMQ.
+
+As such, we can build a simpler model without Gender and Other_medications.
+
+<b>BMQ = Literacy_level + Age</b>
+<br>
+
+```{r echo=FALSE, fig.height=5, fig.width=7, message=FALSE, warning=FALSE, results='asis'}
+library(effects)
+effplot <- allEffects(fit.full)
+plot(effplot)
+ 
+```
+<center>`r figure_nums("full_eff")`</center>
+
+As can be seen, the p-values in the reduced model are below the significance level of .05 therefore Literacy_level and Age can be chosen as the predictors.
+
+```{r, echo=FALSE, results='asis'}
+library(pander)
+fit.reduced <- glm(BMQ~Literacy_level+Age, 
+                family=binomial(link="logit"), data = dt)
+
+pander(fit.reduced)
+ 
+```
+<center>`r table_nums("glm_reduced")`</center>
+<br>
+
+
+```{r echo=FALSE, fig.height=5, fig.width=7, message=FALSE, warning=FALSE, results='asis'}
+library(effects)
+effplot <- allEffects(fit.reduced)
+plot(effplot)
+ 
+```
+<center>`r figure_nums("reduced_eff")`</center>
+<br>
+
+Since the reduced model is a subset of the full model, we can perform ANOVA (Analysis of Variance) on the two models to see if they perform the same.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+modelcomp <- anova(fit.reduced, fit.full, test="Chisq")
+
+kable(modelcomp)
+
+```
+<center>`r table_nums("model_compare")`</center>
+
+With a p-value of 0.85, we can conclude that the reduced model performs just as well as the full model therefore we will use the reduced model going forward.
+
+<br>
+<b>Model Coefficients</b>
+
+The coefficients of the fitted model gives us information on the predictor's effect on the response variable BMQ. The values below have been converted to Odds Scale.
+
+The table 7 below shows the coefficients for the reduced BMQ model. Literacy_level.L is the linear coefficient while Literacy_level.Q is the quadratic coefficient. For our purposes, the value of interest is Literacy_level.L. Here it simply means that for every increment of Literacy_level, the effect of BMQ is multiplied 2.207 times and .966 times every increment in Age.
+
+Table 8 shows these model coefficients with confidence interval of 95%.
+```{r, echo=FALSE, results='asis'}
+# exp to scale up to odds scale, because it's difficult to interpret the response which is log(odds) at Y=1
+
+pander(exp(coef(fit.reduced)))
+
+ 
+```
+<center>`r table_nums("model_coef")`</center>
+<br>
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+ci <- exp(confint(fit.reduced))
+pander(ci)
+
+```
+<center>`r table_nums("model_coefint")`</center>
+<br>
+
+<b>Examining The Effects of Literacy_level and Age (Table 9)</b><br>
+With the fitted BMQ model, we can examine the effect (probability) of each predictor variable by performing a model predict using test data. In this test, we plug in 3 levels of literacy ("limited", "possibly", "adequate") while holding age constant (mean value of Age).
+
+With this test data, it shows that the probability of "limited" literacy is below .5 or 50% which would classify this subject as Non-Adherent while "possibly" and "adequate" levels would classify as Adherent.
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+# perform test prediction by varying literacy level to get probabilities
+test_data <- data.frame(Literacy_level=c("limited", "possibly", "adequate"), Age=c(mean(dt$Age)))
+test_data$Literacy_level <- factor(test_data$Literacy_level, order=TRUE, 
+                            levels=c("limited","possibly", "adequate"))
+
+test_data$prob <- predict(fit.reduced, newdata=test_data, type="response")
+
+
+
+pander(test_data %>%
+  mutate(Pred=if_else(prob > .5, "Adherent", "Non-Adherent")))
+
+```
+<center>`r table_nums("model_pred_lit")`</center>
+<br>
+<b>Examining The Effects of Literacy_level and Age (Table 10)</b><br>
+In the test prediction below, we created a data set holding Literacy_level at "limited" with Age values of 50, 60 and 70. From Table 10 below, we can see that only the 50 year old subject classifies as Adherent while the 60 and 70 year old subjects classify as Non-adherent (below .5 probability). This is consistent with the Effect Plots above (Figure 8).
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+# perform test prediction by varying Age to get probabilities
+test_data <- data.frame(Literacy_level=c("limited", "limited", "limited", "limited", "limited"), Age=c(40,50,60,70,80))
+test_data$Literacy_level <- factor(test_data$Literacy_level, order=TRUE, 
+                                   levels=c("limited","possibly", "adequate"))
+
+test_data$prob <- predict(fit.reduced, newdata=test_data, type="response")
+
+pander(test_data %>%
+  mutate(Pred=if_else(prob > .5, "Adherent", "Non-Adherent")))
+
+```
+<center>`r table_nums("model_pred_lim")`</center>
+<br>
+<b>Examining The Effects of Literacy_level and Age (Table 11)</b><br>
+In the test prediction below, we created a data set holding Literacy_level at "possibly" with Age values of 50, 60 and 70. From Table 11 below, all 3 ages classify as "Adherent". This is consistent with the Effect Plots above (Figure 8).
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+# perform test prediction by varying Age to get probabilities
+test_data <- data.frame(Literacy_level=c("possibly", "possibly", "possibly","possibly", "possibly"), Age=c(40,50,60,70,80))
+test_data$Literacy_level <- factor(test_data$Literacy_level, order=TRUE, 
+                                   levels=c("limited","possibly", "adequate"))
+test_data$prob <- predict(fit.reduced, newdata=test_data, type="response")
+
+pander(test_data %>%
+  mutate(Pred=if_else(prob > .5, "Adherent", "Non-Adherent")))
+
+```
+<center>`r table_nums("model_pred_pos")`</center>
+<br>
+<b>Examining The Effects of Literacy_level and Age (Table 12)</b><br>
+In the test prediction below, we created a data set holding Literacy_level at "adequate" with Age values of 50, 60 and 70. From Table 12 below, all 3 ages classify as "Adherent". This is consistent with the Effect Plots above (Figure 8).
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+# perform test prediction by varying literacy level to get probabilities
+# perform test prediction by varying Age to get probabilities
+test_data <- data.frame(Literacy_level=c("adequate", "adequate", "adequate", "adequate", "adequate"), Age=c(40,50,60,70,80))
+test_data$Literacy_level <- factor(test_data$Literacy_level, order=TRUE, 
+                                   levels=c("limited","possibly", "adequate"))
+
+test_data$Prob <- predict(fit.reduced, newdata=test_data, type="response")
+
+pander(test_data %>%
+  mutate(Pred=if_else(Prob > .5, "Adherent", "Non-Adherent")))
+
+```
+<center>`r table_nums("model_pred_adq")`</center>
+
+## Post Hoc Power Analysis
+
+Based on a similar study by Olaolournpo O, et. al. 2018, at the start of the study, the sample size was calculated using a Test For Proportions Power Analysis. This resulted in a minimum sample size of 242 subjects given two proportions of .33 (Adequate Literacy, Non-Adherent) and .55 (Limited Literacy, Adherence) with desired Power of .8 at a Significance Level of .05. Based on this sample calculation, the team gathered survey data for <b>276</b> subjects.
+
+Later in this study a deeper statistical analysis using Logistic Regression was necessary in order to get a better understanding of the predictor effects on the response variable (BMQ) which represents the patient's adherence. The minimum sample size calculation for Logistic Regression (General Linear Model) differs from that of Test for Proportions as previously calculated thus we recalculated the minimum sample size in order to insure proper sample representation for the Power (.8) desired at a Significance Level of .05.
+
+<b>General Linear Model Sample Size Calculation</b>
+<br>
+
+f2 = (R1 - R2)/1-R1 - the effect size
+
+f2 = (.55-.33)/(1-.55) = .48
+
+u = Number of Predictors (4)
+
+sig.level = .05
+
+power = .8
+
+Plugging in these values to the pwr.f2.test function (R), results in the following:
+<br>
+<b>pwr.f2.test(u=4, f2=.48, sig.level = .05, power=.8)</b>
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+library(pwr)
+p = pwr.f2.test(u=4, f2=.48, sig.level = .05, power=.8)
+
+pander(p)
+
+```
+
+The output v is the denominator degrees of freedom. The formula for v is:
+<br>
+<b>N - u - 1 = v</b>
+<br>
+Calculating for N (sample size for Logistic Regression Model)
+<br>
+<b>N = 25 + 4 + 1 = 30</b>
+<br>
+This is the minimum sample size required for the above Logistic Regression. As such the sample size of 276 from the dataset is more than adequate and therefore can only increase the Power of the Prediction Probabilities in this regression.
+
+The plot below demonstrates how Power varies with respect to sample size. The power required in this study is .8 with a calculated minimum sample size of 30. 
+
+```{r echo=FALSE, fig.height=5, fig.width=7, message=FALSE, warning=FALSE, results='asis'}
+
+# power plot
+library(pwr)
+vw <- seq(6, 300, 1)
+vpw <- length(vw)
+
+p <- NULL
+for (i in 1:vpw){
+  result <- pwr.f2.test(u=4, v = (vw[i]-5), f2=.48,sig.level = .05)
+  p[i] <- result$power
+}
+
+plot(vw-6,p, type = "l", lwd=2, col="red",
+     ylab = "Power",
+     xlab = "Sample Size",
+     main = "Sample Size vs. Power Plot with Effect Size = .48 and Alpha = .05")
+
+```

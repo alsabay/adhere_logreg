@@ -1,0 +1,277 @@
+,Gender,Age,Other Medications
+1,Male ,45,Yes
+2,Female,47,No
+3,Male ,47,Yes
+4,Male ,78,Yes
+5,Female,67,Yes
+6,Female,56,Yes
+7,Female,66,Yes
+8,Female,45,No
+9,Female,39,Yes
+10,Male ,62,Yes
+11,Female,70,Yes
+12,Female,71,Yes
+13,Male ,66,Yes
+14,Female,62,No
+15,Male ,65,No 
+16,Female ,42,Yes
+17,Female,54,Yes
+18,Male ,38,Yes
+19,Male ,45,Yes
+20,Male ,78,Yes
+21,Female ,72,No
+22,Male ,73,No 
+23,Female,65,Yes
+24,Male ,67,Yes
+25,Female,46,No
+26,Male ,48,yes
+27,Female,49,No 
+28,Male ,50,Yes
+29,Male ,52,Yes
+30,Female,63,Yes
+31,Female,62,No
+32,Female,76,No 
+33,Female,59,Yes
+34,Female,60,Yes
+35,Male ,69,No
+36,Female,59,yes
+37,Female,45,No 
+38,Male ,67,No
+39,Female,68,Yes
+40,Male ,79,Yes
+41,Female ,37,Yes
+42,Female,38,Yes
+43,Male ,45,Yes
+44,Male ,78,No
+45,Male ,72,No 
+46,Female ,73,Yes
+47,Male ,65,Yes
+48,Female,67,Yes
+49,Male ,46,Yes
+50,Female,48,No
+51,Female,49,Yes
+52,Male ,50,Yes
+53,Male ,52,Yes
+54,Male ,63,Yes
+55,Female,62,Yes
+56,Female,76,No
+57,Female ,59,No 
+58,Male ,60,Yes
+59,Female,69,Yes
+60,Female,72,Yes
+61,Female,73,Yes
+62,Male ,65,Yes
+63,Male ,67,Yes
+64,Male ,46,Yes
+65,Female ,48,No
+66,Female,49,No 
+67,Female,50,Yes
+68,Male ,52,Yes
+69,Male ,56,Yes
+70,Female,66,Yes
+71,Female,45,Yes
+72,Male ,67,Yes
+73,Male ,78,Yes
+74,Male ,45,Yes
+75,Female,46,No
+76,Female,67,Yes
+77,Female ,44,Yes
+78,Male ,43,Yes
+79,Female,42,Yes
+80,Male ,41,Yes
+81,Female,41,No
+82,Female,43,No 
+83,Male ,47,Yes
+84,Female,52,Yes
+85,Male ,53,Yes
+86,Female ,51,Yes
+87,Female,66,Yes
+88,Male ,60,No
+89,Male ,62,No
+90,Female,64,No 
+91,Male ,68,Yes
+92,Male ,67,Yes
+93,Male ,66,Yes
+94,Female,70,Yes
+95,Female,72,Yes
+96,Female ,73,Yes
+97,Male ,73,Yes
+98,Female,71,Yes
+99,Male ,52,No
+100,Female ,52,No
+101,Male ,55,No 
+102,Female,56,Yes
+103,Male ,67,Yes
+104,Female,56,Yes
+105,Male ,76,Yes
+106,Female,56,Yes
+107,Male ,56,Yes
+108,Male ,70,Yes
+109,Female,66,Yes
+110,Female,65,No
+111,Female,62,Yes
+112,Female,61,Yes
+113,Female,64,Yes
+114,Male ,62,Yes
+115,Female,63,No
+116,Female,78,No 
+117,Male ,56,Yes
+118,Female,65,Yes
+119,Male ,48,Yes
+120,Female ,55,Yes
+121,Female,45,Yes
+122,Male ,47,No
+123,Male ,48,No
+124,Male ,81,No 
+125,Female,82,Yes
+126,Female,70,Yes
+127,Male ,66,Yes
+128,Female,65,Yes
+129,Male ,62,Yes
+130,Male ,61,Yes
+131,Female,64,Yes
+132,Female,62,Yes
+133,Female,63,Yes
+134,Female,78,No
+135,Female,56,Yes
+136,Male ,65,Yes
+137,Female,48,Yes
+138,Female,66,Yes
+139,Male ,60,No
+140,Female,62,No 
+141,Female,64,No 
+142,Female,68,Yes
+143,Female,67,Yes
+144,Female,66,Yes
+145,Male ,70,Yes
+146,Female,72,Yes
+147,Female,73,Yes
+148,Male ,47,Yes
+149,Female,47,Yes
+150,Male ,78,No
+151,Male ,67,Yes
+152,Female,56,Yes
+153,Female,66,Yes
+154,Female,45,Yes
+155,Female,39,Yes
+156,Female,62,No
+157,Male ,70,No 
+158,Female,71,Yes
+159,Female,45,Yes
+160,Female,78,Yes
+161,Female,72,Yes
+162,Male ,73,Yes
+163,Male ,65,No
+164,Male ,67,No
+165,Female,46,No 
+166,Female,48,Yes
+167,Female,49,Yes
+168,Female,50,Yes
+169,Female,52,Yes
+170,Male ,63,Yes
+171,Female,62,Yes
+172,Female,76,Yes
+173,Female,59,No
+174,Female,60,No
+175,Female,69,No 
+176,Female,56,Yes
+177,Female,65,Yes
+178,Male ,48,Yes
+179,Female,66,Yes
+180,Female,60,Yes
+181,Female,62,Yes
+182,Female,64,Yes
+183,Male ,68,Yes
+184,Female,67,No
+185,Female,66,Yes
+186,Male ,39,Yes
+187,Female,62,No
+188,Female,70,No
+189,Female,71,Yes
+190,Male ,45,No
+191,Male ,78,Yes
+192,Male ,72,Yes
+193,Male ,73,Yes
+194,Male ,65,Yes
+195,Female,67,Yes
+196,Female,46,No
+197,Female,48,Yes
+198,Female,49,No
+199,Male ,40,Yes
+200,Female,48,No
+201,Female,47,Yes
+202,Male ,46,Yes
+203,Female,65,No
+204,Female,65,Yes
+205,Female,64,Yes
+206,Male ,68,No
+207,Female,67,No
+208,Female,56,Yes
+209,Male ,55,No
+210,Female,52,Yes
+211,Male ,53,Yes
+212,Male ,55,Yes
+213,Female,57,Yes
+214,Female,59,Yes
+215,Female,58,No
+216,Female,57,Yes
+217,Female,56,Yes
+218,Male ,54,No
+219,Female,51,Yes
+220,Female,51,Yes
+221,Female,51,Yes
+222,Female,51,Yes
+223,Male ,52,Yes
+224,Male ,52,No
+225,Male ,53,Yes
+226,Female,54,No
+227,Female,56,Yes
+228,Female,67,No
+229,Female,58,Yes
+230,Female,49,Yes
+231,Male ,56,Yes
+232,Male ,78,Yes
+233,Male ,52,Yes
+234,Male ,53,No
+235,Male ,54,Yes
+236,Male ,56,Yes
+237,Male ,67,No
+238,Female,58,No
+239,Female,49,Yes
+240,Female,54,No
+241,Female,51,Yes
+242,Female,68,Yes
+243,Female,67,Yes
+244,Male ,56,Yes
+245,Male ,55,Yes
+246,Male ,52,No
+247,Male ,53,Yes
+248,Male ,54,Yes
+249,Female,56,Yes
+250,Male ,54,No
+251,Female,51,Yes
+252,Female,51,Yes
+253,Female,51,Yes
+254,Female,51,Yes
+255,Male ,52,Yes
+256,Male ,52,No
+257,Male ,53,Yes
+258,Female,54,No
+259,Female,56,Yes
+260,Female,67,No
+261,Female,58,Yes
+262,Female,49,Yes
+263,Male ,56,Yes
+264,Female,42,Yes
+265,Female,43,Yes
+266,Female,42,Yes
+267,Female,50,Yes
+268,Male ,51,Yes
+269,Male ,52,No
+270,Male ,56,Yes
+271,Male ,57,Yes
+272,Male ,59,No
+273,Female,60,No
+274,Male ,49,Yes
+275,Female,44,No
+276,Female,42,Yes
